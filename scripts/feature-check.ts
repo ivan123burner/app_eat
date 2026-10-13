@@ -1,0 +1,39 @@
+/* Временный смоук-тест логики поиска и промта (проверяется в Node через esbuild) */
+import { searchIngredients } from '../src/data/ingredientsDatabase'
+import { buildPrompt } from '../src/lib/prompt'
+import { EMPTY_ANSWERS, type QuizAnswers } from '../src/types'
+
+console.log('═══ Поиск по справочнику ═══')
+for (const q of ['ку', 'авок', 'СЫР', 'боу', 'рыб', 'zzz']) {
+  const res = searchIngredients(q, 6)
+  console.log(`"${q}" -> ${res.map((r) => `${r.name} [${r.category}]`).join(', ') || '(ничего)'}`)
+}
+
+console.log('\n═══ Промт с акцентом ═══')
+const answers: QuizAnswers = {
+  ...EMPTY_ANSWERS,
+  density: 'heavy',
+  nutrients: ['protein'],
+  volume: 3,
+  mealType: 'lunch',
+  cookingFormat: 'quick_cook',
+  heroIngredient: 'куриное филе',
+  ingredientsText: 'есть майонез',
+  diets: ['lactose_free'],
+}
+
+const { system, user } = buildPrompt(answers)
+const checks: [string, boolean][] = [
+  ['system: правило про ГЛАВНЫЙ АКЦЕНТ', system.includes('ГЛАВНЫЙ АКЦЕНТ')],
+  ['user: акцент «куриное филе»', user.includes('ГЛАВНЫЙ АКЦЕНТ: «куриное филе»')],
+  ['user: строка 3а в ответах', user.includes('3а. ГЛАВНЫЙ АКЦЕНТ')],
+  ['user: продукты из холодильника', user.includes('есть майонез')],
+  ['user: диета без лактозы', user.includes('без лактозы')],
+  ['user: формат «быстро сам»', user.includes('до 20 минут')],
+]
+for (const [name, ok] of checks) console.log(`${ok ? '✅' : '❌'} ${name}`)
+
+console.log('\n═══ Промт БЕЗ акцента (стандартный сценарий) ═══')
+const plain = buildPrompt({ ...EMPTY_ANSWERS, density: 'light', nutrients: ['balance'], mealType: 'snack', cookingFormat: 'order_out' })
+console.log('✅ user без акцента (стандартный сценарий):', !plain.user.includes('ГЛАВНЫЙ АКЦЕНТ'))
+console.log('\nГотово.')
