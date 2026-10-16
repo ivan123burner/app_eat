@@ -95,12 +95,48 @@ export const NUTRIENT_OPTIONS: OptionDef<Nutrient>[] = [
 ]
 
 /* 3. Объём против калорийности (фирменная фишка) */
-export const VOLUME_STOPS: { emoji: string; label: string; short: string }[] = [
-  { emoji: '🥗', label: 'Огромная тарелка — минимум калорий', short: 'Максимум объёма' },
-  { emoji: '🍲', label: 'Скорее большой объём', short: 'Большой объём' },
-  { emoji: '🍽️', label: 'Золотая середина', short: 'Баланс' },
-  { emoji: '🍫', label: 'Скорее компактно', short: 'Компактно' },
-  { emoji: '🥜', label: 'Малый размер — максимум энергии', short: 'Максимальная плотность' },
+export const VOLUME_STOPS: {
+  emoji: string
+  label: string
+  short: string
+  hint: string
+  icon: LucideIcon
+}[] = [
+  {
+    emoji: '🥗',
+    label: 'Огромная тарелка — минимум калорий',
+    short: 'Максимум объёма',
+    hint: 'Салаты, супы, овощи: много еды — мало калорий',
+    icon: Salad,
+  },
+  {
+    emoji: '🍲',
+    label: 'Скорее большой объём',
+    short: 'Большой объём',
+    hint: 'Плотная, но не тяжёлая тарелка',
+    icon: Soup,
+  },
+  {
+    emoji: '🍽️',
+    label: 'Золотая середина',
+    short: 'Баланс',
+    hint: 'Обычная порция и обычная калорийность',
+    icon: UtensilsCrossed,
+  },
+  {
+    emoji: '🍫',
+    label: 'Скорее компактно',
+    short: 'Компактно',
+    hint: 'Несколько кусочков, но по-настоящему сытно',
+    icon: Cookie,
+  },
+  {
+    emoji: '🥜',
+    label: 'Малый размер — максимум энергии',
+    short: 'Максимальная плотность',
+    hint: 'Орехи, зефир, батончики: мало места — много энергии',
+    icon: Flame,
+  },
 ]
 
 /* 4. Тип приёма пищи */

@@ -1,13 +1,16 @@
+import { ChevronRight } from 'lucide-react'
 import OptionCard from '../OptionCard'
 import { NUTRIENT_OPTIONS } from '../../data/quizConfig'
+import { cn } from '../../lib/cn'
 import type { Nutrient } from '../../types'
 
 interface Props {
   value: Nutrient[]
   onToggle: (v: Nutrient) => void
+  onNext: () => void
 }
 
-export default function NutrientsStep({ value, onToggle }: Props) {
+export default function NutrientsStep({ value, onToggle, onNext }: Props) {
   return (
     <div>
       <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-cream-100 px-3 py-1 text-xs font-semibold text-ink-500">
@@ -28,6 +31,21 @@ export default function NutrientsStep({ value, onToggle }: Props) {
           </div>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={value.length === 0}
+        className={cn(
+          'mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-bold transition-colors',
+          value.length > 0
+            ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25 hover:bg-brand-600'
+            : 'cursor-not-allowed bg-cream-200 text-ink-400',
+        )}
+      >
+        Дальше
+        <ChevronRight className="size-5" />
+      </button>
     </div>
   )
 }

@@ -36,4 +36,21 @@ for (const [name, ok] of checks) console.log(`${ok ? '✅' : '❌'} ${name}`)
 console.log('\n═══ Промт БЕЗ акцента (стандартный сценарий) ═══')
 const plain = buildPrompt({ ...EMPTY_ANSWERS, density: 'light', nutrients: ['balance'], mealType: 'snack', cookingFormat: 'order_out' })
 console.log('✅ user без акцента (стандартный сценарий):', !plain.user.includes('ГЛАВНЫЙ АКЦЕНТ'))
-console.log('\nГотово.')
+console.log('\n═══ Промт с целью и исключением повторов ═══')
+const withGoal = buildPrompt(
+  { ...EMPTY_ANSWERS, density: 'light', nutrients: ['fiber'], mealType: 'lunch', cookingFormat: 'quick_cook' },
+  {
+    goalPromptText: 'снижение веса: дефицит калорий',
+    goalLabel: 'Похудение',
+    excludeTitles: ['Цезарь с гриль-курицей и хрустящими крутонами', 'Паста качо-э-пепе'],
+  },
+)
+const goalChecks: [string, boolean][] = [
+  ['user: цель «Похудение»', withGoal.user.includes('ЦЕЛЬ ПОЛЬЗОВАТЕЛЯ (Похудение)')],
+  ['user: дефицит калорий', withGoal.user.includes('дефицит калорий')],
+  ['user: не повторять блюда', withGoal.user.includes('НЕ ПОВТОРЯЙ') && withGoal.user.includes('качо-э-пепе')],
+  ['system: правило про цель', system.includes('ЦЕЛЬ ПОЛЬЗОВАТЕЛЯ')],
+]
+for (const [name, ok] of goalChecks) console.log(`${ok ? '✅' : '❌'} ${name}`)
+
+console.log('\n═══ Готово ═══')

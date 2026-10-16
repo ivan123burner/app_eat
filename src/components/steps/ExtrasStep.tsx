@@ -8,9 +8,10 @@ interface Props {
   diets: DietFlag[]
   onTextChange: (v: string) => void
   onToggleDiet: (v: DietFlag) => void
+  onNext: () => void
 }
 
-export default function ExtrasStep({ text, diets, onTextChange, onToggleDiet }: Props) {
+export default function ExtrasStep({ text, diets, onTextChange, onToggleDiet, onNext }: Props) {
   return (
     <div className="space-y-6">
       <div>
@@ -63,6 +64,14 @@ export default function ExtrasStep({ text, diets, onTextChange, onToggleDiet }: 
           })}
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={onNext}
+        className="mt-2 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand-500 text-[15px] font-bold text-white shadow-lg shadow-brand-500/25 transition-colors hover:bg-brand-600"
+      >
+        ✨ Подобрать блюда
+      </button>
     </div>
   )
 }

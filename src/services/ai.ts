@@ -1,4 +1,4 @@
-import { buildPrompt } from '../lib/prompt'
+import { buildPrompt, type PromptOptions } from '../lib/prompt'
 import { MOCK_DISHES } from '../data/mockDishes'
 import { dishListSchema, type Dish, type QuizAnswers } from '../types'
 
@@ -26,29 +26,37 @@ export class MissingKeyError extends Error {
   }
 }
 
-export async function generateDishes(answers: QuizAnswers): Promise<Dish[]> {
+export async function generateDishes(
+  answers: QuizAnswers,
+  options: PromptOptions = {},
+): Promise<Dish[]> {
+  const exclude = options.excludeTitles ?? []
+
   switch (provider) {
     case 'mock': {
       // Имитация задержки LLM, чтобы показать анимацию загрузки
       await new Promise((r) => setTimeout(r, 1800))
-      return shuffle([...MOCK_DISHES]).slice(0, 10)
+      // «Ещё 10 блюд»: исключаем уже показанные; если всё уже было — перемешиваем заново
+      const fresh = MOCK_DISHES.filter((d) => !exclude.includes(d.title))
+      const pool = fresh.length > 0 ? fresh : [...MOCK_DISHES]
+      return shuffle(pool).slice(0, 10)
     }
     case 'openai': {
-      const { system, user } = buildPrompt(answers)
+      const { system, user } = buildPrompt(answers, options)
       const content = await callOpenAI(system, user)
       return parseDishesContent(content)
     }
     case 'anthropic': {
-      const { system, user } = buildPrompt(answers)
+      const { system, user } = buildPrompt(answers, options)
       const content = await callAnthropic(system, user)
       return parseDishesContent(content)
     }
     case 'proxy': {
-      const { system, user } = buildPrompt(answers)
+      const { system, user } = buildPrompt(answers, options)
       const res = await fetch(proxyUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers, system, user }),
+        body: JSON.stringify({ answers, system, user, options }),
       })
       if (!res.ok) throw new Error(`Прокси ответил ${res.status}: ${await res.text()}`)
       const data: unknown = await res.json()

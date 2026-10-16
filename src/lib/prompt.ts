@@ -20,7 +20,6 @@ export const RESPONSE_EXAMPLE_JSON = JSON.stringify(DISHES_JSON_EXAMPLE, null, 2
 export function describeAnswers(a: QuizAnswers): string {
   const lines: string[] = []
   lines.push(`1. Плотность пищи: ${a.density ? DENSITY_LABEL[a.density] : 'не указана'}`)
-
   const nutrients = a.nutrients.map((n) => NUTRIENT_LABEL[n]).join(', ')
   lines.push(`2. Приоритет по нутриентам: ${nutrients || 'без предпочтения'}`)
 
@@ -68,6 +67,7 @@ export function buildSystemPrompt(): string {
 - cooking_time_minutes (необязательно): время приготовления, минут.
 
 УЧЁТ ОТВЕТОВ:
+- Если в ответах указана «ЦЕЛЬ ПОЛЬЗОВАТЕЛЯ» — это приоритетный вектор: калорийность, соотношение БЖУ и характер блюд должны соответствовать цели.
 - Доминанты по нутриентам должны читаться в ratio БЖУ (например, упор на белки → белок заметно превышает углеводы).
 - Шкала объёма: при смещении к большому объёму минимум 7 из 10 блюд — large_volume; при смещении к компактному — наоборот.
 - Если указан «ГЛАВНЫЙ АКЦЕНТ» (конкретный ингредиент или блюдо) — минимум 5 из 10 блюд содержат этот ингредиент или построены вокруг этого блюда; остальные блюда гармонично дополняют акцент, а не дублируют друг друга.
@@ -81,11 +81,23 @@ export function buildSystemPrompt(): string {
 ${RESPONSE_EXAMPLE_JSON}`
 }
 
-export function buildUserPrompt(a: QuizAnswers): string {
+export interface PromptOptions {
+  /** Глобальная цель пользователя (похудение, набор массы…) */
+  goalPromptText?: string
+  goalLabel?: string
+  /** Блюда, которые уже показывали — не повторять */
+  excludeTitles?: string[]
+}
+
+export function buildUserPrompt(a: QuizAnswers, options: PromptOptions = {}): string {
   const hero = a.heroIngredient?.trim()
-  const hasExtras = a.diets.length > 0 || a.ingredientsText.trim().length > 0 || Boolean(hero)
+  const hasExtras =
+    a.diets.length > 0 || a.ingredientsText.trim().length > 0 || Boolean(hero) || Boolean(options.goalPromptText)
   const extra = hasExtras
     ? [
+        options.goalPromptText
+          ? `ЦЕЛЬ ПОЛЬЗОВАТЕЛЯ (${options.goalLabel}): ${options.goalPromptText}. Учитывай её при выборе блюд, их калорийности и БЖУ.`
+          : '',
         a.diets.length > 0
           ? `Жёсткие ограничения: ${a.diets.map((d) => DIET_LABEL[d]).join(', ')}.`
           : '',
@@ -94,6 +106,9 @@ export function buildUserPrompt(a: QuizAnswers): string {
           : '',
         a.ingredientsText.trim()
           ? `Есть продукты/пожелания: «${a.ingredientsText.trim()}».`
+          : '',
+        options.excludeTitles && options.excludeTitles.length > 0
+          ? `НЕ ПОВТОРЯЙ блюда, которые уже были: ${options.excludeTitles.map((t) => `«${t}»`).join(', ')}.`
           : '',
       ]
         .filter(Boolean)
@@ -111,6 +126,6 @@ ${extra}
 }
 
 /** Полный набор промтов для отправки в LLM */
-export function buildPrompt(a: QuizAnswers): BuiltPrompt {
-  return { system: buildSystemPrompt(), user: buildUserPrompt(a) }
+export function buildPrompt(a: QuizAnswers, options: PromptOptions = {}): BuiltPrompt {
+  return { system: buildSystemPrompt(), user: buildUserPrompt(a, options) }
 }

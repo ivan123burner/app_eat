@@ -84,6 +84,12 @@ export const dishListSchema = z.object({
 export type Bzhu = z.infer<typeof bzhuSchema>
 export type Dish = z.infer<typeof dishSchema>
 
+/**
+ * Блюдо с внутренним уникальным id для React-ключей.
+ * uid стабилен: удаление/добавление одной карточки не пересоздаёт остальные.
+ */
+export type DishWithMeta = Dish & { uid: string }
+
 /* ══════════════════════════════════════════════
    Пример того, что ожидаем от API (для документации/прокси)
    ══════════════════════════════════════════════ */
