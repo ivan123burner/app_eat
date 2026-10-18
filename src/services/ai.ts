@@ -5,13 +5,14 @@ import { dishListSchema, type Dish, type QuizAnswers } from '../types'
 /* ══════════════════════════════════════════════
    Сервис генерации подборки.
    Провайдер выбирается в .env: VITE_AI_PROVIDER
-     mock     — встроенная демо-подборка (по умолчанию, без сети)
-     openai   — OpenAI Chat Completions (нужен VITE_OPENAI_API_KEY)
-     anthropic— Anthropic Messages (нужен VITE_ANTHROPIC_API_KEY)
-     proxy    — свой backend: POST VITE_PROXY_URL
+     mock      — встроенная демо-подборка (по умолчанию, без сети)
+     openrouter— OpenRouter (нужен VITE_OPENROUTER_API_KEY, напр. gemma)
+     openai    — OpenAI Chat Completions (нужен VITE_OPENAI_API_KEY)
+     anthropic — Anthropic Messages (нужен VITE_ANTHROPIC_API_KEY)
+     proxy     — свой backend: POST VITE_PROXY_URL
    ══════════════════════════════════════════════ */
 
-type Provider = 'mock' | 'openai' | 'anthropic' | 'proxy'
+type Provider = 'mock' | 'openrouter' | 'openai' | 'anthropic' | 'proxy'
 
 const provider = (import.meta.env.VITE_AI_PROVIDER ?? 'mock') as Provider
 const proxyUrl = import.meta.env.VITE_PROXY_URL ?? '/api/generate'
@@ -40,6 +41,11 @@ export async function generateDishes(
       const fresh = MOCK_DISHES.filter((d) => !exclude.includes(d.title))
       const pool = fresh.length > 0 ? fresh : [...MOCK_DISHES]
       return shuffle(pool).slice(0, 10)
+    }
+    case 'openrouter': {
+      const { system, user } = buildPrompt(answers, options)
+      const content = await callOpenRouter(system, user)
+      return parseDishesContent(content)
     }
     case 'openai': {
       const { system, user } = buildPrompt(answers, options)
@@ -73,6 +79,51 @@ export async function generateDishes(
 }
 
 /* ─── HTTP-клиенты LLM ─────────────────────────── */
+
+/**
+ * OpenRouter (https://openrouter.ai) — OpenAI-совместимый шлюз ко множеству
+ * моделей, включая Gemma. Без response_format: не все модели его умеют,
+ * а свой extractJson() и так вытаскивает JSON из любого текста.
+ */
+async function callOpenRouter(system: string, user: string): Promise<string> {
+  const key = import.meta.env.VITE_OPENROUTER_API_KEY
+  if (!key) throw new MissingKeyError('OpenRouter')
+
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`,
+      // OpenRouter просит идентифицировать приложение (для статистики).
+      // Важно: значения заголовков — только Latin-1, поэтому без кириллицы!
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'Chto-Poeat',
+    },
+    body: JSON.stringify({
+      model: import.meta.env.VITE_OPENROUTER_MODEL ?? 'google/gemma-4-31b-it',
+      temperature: 0.85,
+      max_tokens: 8000,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }),
+  })
+  if (!res.ok) throw new Error(`OpenRouter API ${res.status}: ${await res.text()}`)
+
+  const data = await res.json()
+  if (data.error) throw new Error(`OpenRouter: ${data.error.message ?? 'ошибка'}`)
+
+  const choice = data.choices?.[0]
+  if (choice?.finish_reason === 'length') {
+    throw new Error('Ответ модели обрезан по лимиту токенов — попробуй ещё раз.')
+  }
+  const content = choice?.message?.content
+  if (typeof content !== 'string' || content.length === 0) {
+    throw new Error('OpenRouter вернул пустой ответ')
+  }
+  return content
+}
 
 async function callOpenAI(system: string, user: string): Promise<string> {
   const key = import.meta.env.VITE_OPENAI_API_KEY
