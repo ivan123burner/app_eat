@@ -53,4 +53,15 @@ const goalChecks: [string, boolean][] = [
 ]
 for (const [name, ok] of goalChecks) console.log(`${ok ? '✅' : '❌'} ${name}`)
 
+console.log('\n═══ Страна и простые доступные рецепты ═══')
+const withCountry = buildPrompt({ ...EMPTY_ANSWERS, density: 'normal' }, { country: 'Казахстан' })
+const countryChecks: [string, boolean][] = [
+  ['user: «СТРАНА ПОЛЬЗОВАТЕЛЯ: Казахстан»', withCountry.user.includes('СТРАНА ПОЛЬЗОВАТЕЛЯ: Казахстан')],
+  ['user: доступные продукты/супермаркеты', withCountry.user.includes('супермаркеты')],
+  ['system: блок «ПРОСТОТА И ДОСТУПНОСТЬ»', withCountry.system.includes('ПРОСТОТА И ДОСТУПНОСТЬ')],
+  ['system: без экзотики и дорогих ингредиентов', withCountry.system.includes('экзотических ингредиентов')],
+  ['system: 5-8 простых ингредиентов', withCountry.system.includes('5-8 простых ингредиентов')],
+]
+for (const [name, ok] of countryChecks) console.log(`${ok ? '✅' : '❌'} ${name}`)
+
 console.log('\n═══ Готово ═══')

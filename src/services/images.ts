@@ -1,20 +1,46 @@
 import { useEffect, useState } from 'react'
 
 /* ══════════════════════════════════════════════
-   Фото блюд.
-   - Если задан VITE_UNSPLASH_ACCESS_TOKEN — запрашиваем фото
-     по search_query через Unsplash API (кэшируем в памяти).
-   - Иначе (или при ошибке) — эмодзи + градиент-плейсхолдер:
-     приложение полностью работает офлайн.
+   Фото блюд — цепочка источников:
+   1. TheMealDB (https://www.themealdb.com) — бесплатно, без ключа,
+      поиск по английскому search_query блюда.
+   2. Unsplash — если задан VITE_UNSPLASH_ACCESS_TOKEN.
+   3. Фолбэк: эмодзи + градиент — приложение работает офлайн.
+   Результат кэшируется в памяти на время сессии.
    ══════════════════════════════════════════════ */
 
 const token = import.meta.env.VITE_UNSPLASH_ACCESS_TOKEN as string | undefined
 
-/** module-level кэш: query -> url|null (null = фолбэк) */
+/** module-level кэш: "img:"+query -> url|null (null = фолбэк) */
 const cache = new Map<string, string | null>()
 
+/**
+ * TheMealDB: search.php?s=... ищет по названиям блюд (англ.).
+ * Если точный запрос не совпал — пробуем первые 2 слова, затем первое,
+ * чтобы увеличить шанс найти подходящее фото.
+ */
+async function fetchMealDbImage(query: string): Promise<string | null> {
+  const words = query.trim().split(/\s+/).filter(Boolean)
+  const attempts = [...new Set([query.trim(), words.slice(0, 2).join(' '), words[0] ?? ''])].filter(
+    Boolean,
+  )
+  for (const q of attempts) {
+    try {
+      const res = await fetch(
+        'https://www.themealdb.com/api/json/v1/1/search.php?s=' + encodeURIComponent(q),
+      )
+      if (!res.ok) continue
+      const data = await res.json()
+      const thumb: string | undefined = data.meals?.[0]?.strMealThumb
+      if (thumb) return thumb
+    } catch {
+      return null // сеть/CORS недоступны — дальше не пробуем
+    }
+  }
+  return null
+}
+
 async function fetchUnsplashImage(query: string): Promise<string | null> {
-  if (cache.has(query)) return cache.get(query)!
   try {
     const url =
       'https://api.unsplash.com/search/photos?per_page=1&content_filter=high&orientation=landscape&query=' +
@@ -22,13 +48,20 @@ async function fetchUnsplashImage(query: string): Promise<string | null> {
     const res = await fetch(url, { headers: { Authorization: `Client-ID ${token}` } })
     if (!res.ok) throw new Error(String(res.status))
     const data = await res.json()
-    const photoUrl: string | undefined = data.results?.[0]?.urls?.small
-    cache.set(query, photoUrl ?? null)
-    return photoUrl ?? null
+    return data.results?.[0]?.urls?.small ?? null
   } catch {
-    cache.set(query, null)
     return null
   }
+}
+
+/** Единая цепочка: TheMealDB → Unsplash (если токен) → null (эмодзи) */
+async function resolveImage(query: string): Promise<string | null> {
+  const key = `img:${query}`
+  if (cache.has(key)) return cache.get(key)!
+  let url = await fetchMealDbImage(query)
+  if (!url && token) url = await fetchUnsplashImage(query)
+  cache.set(key, url)
+  return url
 }
 
 export interface DishImageResult {
@@ -37,22 +70,20 @@ export interface DishImageResult {
 }
 
 export function useDishImage(query: string): DishImageResult {
-  const [src, setSrc] = useState<string | null>(() => cache.get(query) ?? null)
-  const [loading, setLoading] = useState(!token || !cache.has(query))
+  const key = `img:${query}`
+  const [src, setSrc] = useState<string | null>(() => cache.get(key) ?? null)
+  const [loading, setLoading] = useState(() => !cache.has(key))
 
   useEffect(() => {
     let cancelled = false
-    if (!token) {
-      setLoading(false)
-      return
-    }
-    const cached = cache.get(query)
+    const cached = cache.get(key)
     if (cached !== undefined) {
+      setSrc(cached)
       setLoading(false)
       return
     }
     setLoading(true)
-    void fetchUnsplashImage(query).then((url) => {
+    void resolveImage(query).then((url) => {
       if (!cancelled) {
         setSrc(url)
         setLoading(false)
@@ -61,6 +92,7 @@ export function useDishImage(query: string): DishImageResult {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
 
   return { src, loading }
@@ -69,7 +101,7 @@ export function useDishImage(query: string): DishImageResult {
 /* ─── Фолбэк: эмодзи и градиент по названию/запросу ─── */
 
 const EMOJI_MAP: [RegExp, string][] = [
-  [/салат|salad|бowl|боул|зелень|avocado|авокадо/, '🥗'],
+  [/салат|salad|bowl|боул|зелень|avocado|авокадо/, '🥗'],
   [/суп|soup|том-ям|tom ?yum|лапша|noodle|рамен|ramen/, '🍲'],
   [/паст|pasta|макарон|спагетти|carbonara|карбонар/, '🍝'],
   [/стейк|steak|мяс|beef|говядин|бургер|burger/, '🥩'],

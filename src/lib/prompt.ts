@@ -77,6 +77,11 @@ export function buildSystemPrompt(): string {
 - Следи, чтобы подборка была разнообразной: разные кухни, разные основные ингредиенты, не более 2 блюд одного типа.
 - Не выдумывай заведения и доставки по именам — давай универсальные рекомендации.
 
+ПРОСТОТА И ДОСТУПНОСТЬ (важнее кулинарных изысков):
+- Блюда — приземлённые и доступные каждому независимо от дохода: простые распространённые продукты из обычного супермаркета или рынка.
+- Без изысков: никаких редких, дорогих или экзотических ингредиентов, ресторанной подачи и сложных техник. Рецепт должен получиться у человека с минимальным опытом готовки.
+- На блюдо — 5-8 простых ингредиентов, минимум специй (соль перец и 1-3 доступные приправы), понятная пошаговка.
+
 ПРИМЕР ОЖИДАЕМОГО JSON:
 ${RESPONSE_EXAMPLE_JSON}`
 }
@@ -85,18 +90,28 @@ export interface PromptOptions {
   /** Глобальная цель пользователя (похудение, набор массы…) */
   goalPromptText?: string
   goalLabel?: string
+  /** Страна пользователя — доступные продукты и местная кухня */
+  country?: string
   /** Блюда, которые уже показывали — не повторять */
   excludeTitles?: string[]
 }
 
 export function buildUserPrompt(a: QuizAnswers, options: PromptOptions = {}): string {
   const hero = a.heroIngredient?.trim()
+  const country = options.country?.trim()
   const hasExtras =
-    a.diets.length > 0 || a.ingredientsText.trim().length > 0 || Boolean(hero) || Boolean(options.goalPromptText)
+    a.diets.length > 0 ||
+    a.ingredientsText.trim().length > 0 ||
+    Boolean(hero) ||
+    Boolean(options.goalPromptText) ||
+    Boolean(country)
   const extra = hasExtras
     ? [
         options.goalPromptText
           ? `ЦЕЛЬ ПОЛЬЗОВАТЕЛЯ (${options.goalLabel}): ${options.goalPromptText}. Учитывай её при выборе блюд, их калорийности и БЖУ.`
+          : '',
+        country
+          ? `СТРАНА ПОЛЬЗОВАТЕЛЯ: ${country} — продукты должны быть доступны в этой стране: обычные супермаркеты и рынки этой страны, местная кухня и сезонные продукты.`
           : '',
         a.diets.length > 0
           ? `Жёсткие ограничения: ${a.diets.map((d) => DIET_LABEL[d]).join(', ')}.`

@@ -30,6 +30,7 @@ export default function App() {
 
   /* Персистентное состояние (localStorage) */
   const [goalId, setGoalId] = useLocalStorage<string | null>('chto-poeat:goal', null)
+  const [country, setCountry] = useLocalStorage<string>('chto-poeat:country', '')
   const [favorites, setFavorites] = useLocalStorage<Dish[]>('chto-poeat:favorites', [])
   const [dislikedTitles, setDislikedTitles] = useLocalStorage<string[]>(
     'chto-poeat:disliked',
@@ -62,6 +63,7 @@ export default function App() {
         const fresh = await generateDishes(answers, {
           goalPromptText: goal?.promptText,
           goalLabel: goal?.label,
+          country: country.trim() || undefined,
         })
         setDishes(tagDishes(fresh))
         setScreen({ name: 'results', answers })
@@ -73,7 +75,7 @@ export default function App() {
         })
       }
     },
-    [goal, setFavoriteIngredients],
+    [goal, country, setFavoriteIngredients],
   )
 
   const handleMore = useCallback(async () => {
@@ -83,6 +85,7 @@ export default function App() {
       const more = await generateDishes(screen.answers, {
         goalPromptText: goal?.promptText,
         goalLabel: goal?.label,
+        country: country.trim() || undefined,
         excludeTitles: dishes.map((d) => d.title),
       })
       setDishes((prev) => [...prev, ...tagDishes(more)])
@@ -91,7 +94,7 @@ export default function App() {
     } finally {
       setLoadingMore(false)
     }
-  }, [screen, loadingMore, dishes, goal])
+  }, [screen, loadingMore, dishes, goal, country])
 
   const restart = useCallback(() => {
     setDishes([])
@@ -151,6 +154,7 @@ export default function App() {
             answers={screen.answers}
             goalLabel={goal?.label ?? null}
             goalEmoji={goal?.emoji ?? null}
+            country={country.trim()}
             favorites={favorites}
             dislikedTitles={dislikedTitles}
             loadingMore={loadingMore}
@@ -182,6 +186,8 @@ export default function App() {
           setMenuOpen(false)
           setGoalPickerOpen(true)
         }}
+        country={country}
+        onCountryChange={setCountry}
         favorites={favorites}
         favoriteIngredients={favoriteIngredients}
         onOpenDish={(dish) => {

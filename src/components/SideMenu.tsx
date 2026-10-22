@@ -9,6 +9,8 @@ interface Props {
   goalLabel: string | null
   goalEmoji: string | null
   onChangeGoal: () => void
+  country: string
+  onCountryChange: (v: string) => void
   favorites: Dish[]
   favoriteIngredients: string[]
   onOpenDish: (dish: Dish) => void
@@ -25,6 +27,8 @@ export default function SideMenu({
   goalLabel,
   goalEmoji,
   onChangeGoal,
+  country,
+  onCountryChange,
   favorites,
   favoriteIngredients,
   onOpenDish,
@@ -64,12 +68,30 @@ export default function SideMenu({
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 pb-8">
-              {/* Цель */}
+              {/* Цель и страна */}
               <section className="rounded-2xl border border-cream-200 bg-white p-4">
                 <p className="text-xs font-bold tracking-wide text-ink-400 uppercase">Моя цель</p>
                 <p className="mt-2 font-extrabold">
                   {goalEmoji} {goalLabel ?? 'не выбрана'}
                 </p>
+
+                <label className="mt-3 block">
+                  <span className="text-xs font-bold tracking-wide text-ink-400 uppercase">
+                    Моя страна
+                  </span>
+                  <input
+                    type="text"
+                    value={country}
+                    onChange={(e) => onCountryChange(e.target.value)}
+                    placeholder="Например: Россия"
+                    maxLength={60}
+                    className="mt-1.5 w-full rounded-xl border-2 border-cream-200 bg-cream-50 px-3 py-2 text-sm font-semibold outline-none transition-colors focus:border-brand-400"
+                  />
+                  <span className="mt-1 block text-xs text-ink-400">
+                    Подберём блюда из продуктов, доступных в твоей стране
+                  </span>
+                </label>
+
                 <button
                   type="button"
                   onClick={onChangeGoal}

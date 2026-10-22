@@ -17,6 +17,7 @@ interface Props {
   answers: QuizAnswers
   goalLabel: string | null
   goalEmoji: string | null
+  country: string
   favorites: Dish[]
   dislikedTitles: string[]
   loadingMore: boolean
@@ -32,6 +33,7 @@ export default function Results({
   answers,
   goalLabel,
   goalEmoji,
+  country,
   favorites,
   dislikedTitles,
   loadingMore,
@@ -48,6 +50,7 @@ export default function Results({
 
   const chips: string[] = []
   if (goalLabel) chips.push(`${goalEmoji} ${goalLabel}`)
+  if (country) chips.push(`🌍 ${country}`)
   if (answers.heroIngredient) chips.push(`✨ акцент: ${answers.heroIngredient}`)
   if (answers.mealType) chips.push(MEAL_TYPE_LABEL[answers.mealType])
   if (answers.density) chips.push(DENSITY_LABEL[answers.density])
